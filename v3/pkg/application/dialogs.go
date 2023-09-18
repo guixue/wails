@@ -1,6 +1,7 @@
 package application
 
 import (
+	"runtime"
 	"strings"
 	"sync"
 )
@@ -265,7 +266,16 @@ func (d *OpenFileDialogStruct) PromptForSingleSelection() (string, error) {
 	if d.impl == nil {
 		d.impl = newOpenFileDialogImpl(d)
 	}
-	selection, err := invokeSyncWithResultAndError(d.impl.show)
+	var selection []string
+	var err error
+	//Fixed: macos will locked
+	//	C.showOpenFileDialog has checked dispatch_async dispatch_get_main_queue()
+	if runtime.GOOS == "darwin" {
+		selection, err = d.impl.show()
+	} else {
+		selection, err = invokeSyncWithResultAndError(d.impl.show)
+	}
+
 	var result string
 	if len(selection) > 0 {
 		result = selection[0]
@@ -289,7 +299,15 @@ func (d *OpenFileDialogStruct) PromptForMultipleSelection() ([]string, error) {
 	if d.impl == nil {
 		d.impl = newOpenFileDialogImpl(d)
 	}
-	return invokeSyncWithResultAndError(d.impl.show)
+
+	var selection []string
+	var err error
+	if runtime.GOOS == "darwin" {
+		selection, err = d.impl.show()
+	} else {
+		selection, err = invokeSyncWithResultAndError(d.impl.show)
+	}
+	return selection, err
 }
 
 func (d *OpenFileDialogStruct) SetMessage(message string) *OpenFileDialogStruct {
